@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flashcard Quiz App</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f4ff;
+      --surface: #ffffff;
+      --primary: #4f46e5;
+      --primary-light: #818cf8;
+      --accent: #06b6d4;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --text: #1e1b4b;
+      --muted: #6b7280;
+      --border: #e0e7ff;
+      --card-back: #1e1b4b;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    header .eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      color: var(--text);
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .tab {
+      padding: 8px 22px;
+      border-radius: 999px;
+      border: 2px solid var(--border);
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    /* ── SECTIONS ── */
+    .section { display: none; max-width: 680px; margin: 0 auto; }
+    .section.visible { display: block; }
+
+    /* ── STATS BAR ── */
+    .stats {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .stat-pill span { color: var(--primary); font-weight: 600; }
+
+    /* ── FLASHCARD ── */
+    .card-wrap {
+      perspective: 1200px;
+      height: 260px;
+      margin-bottom: 24px;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card-inner.flipped { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .card-front {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      box-shadow: 0 4px 24px rgba(79,70,229,0.08);
+    }
+
+    .card-back {
+      background: var(--card-back);
+      transform: rotateY(180deg);
+    }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .card-front .card-label { color: var(--primary-light); }
+    .card-back .card-label { color: var(--accent); }
+
+    .card-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.2rem, 3vw, 1.7rem);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .card-front .card-text { color: var(--text); }
+    .card-back .card-text { color: #fff; }
+
+    .flip-hint {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* ── NAVIGATION ── */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .nav-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--primary);
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .nav-btn:disabled:hover { background: var(--surface); color: var(--primary); border-color: var(--border); }
+
+    .card-counter {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--muted);
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* ── SHOW ANSWER BTN ── */
+    .show-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      margin-bottom: 12px;
+    }
+
+    .show-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    /* ── ADD/EDIT FORM ── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .form-card h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      margin-bottom: 18px;
+      color: var(--text);
+    }
+
+    .form-group { margin-bottom: 14px; }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      border-color: var(--primary);
+    }
+
+    .form-actions { display: flex; gap: 10px; }
+
+    .btn-primary {
+      flex: 1;
+      padding: 12px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-secondary {
+      padding: 12px 20px;
+      background: transparent;
+      color: var(--muted);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+    /* ── CARD LIST ── */
+    .card-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .list-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .list-item-content { flex: 1; min-width: 0; }
+
+    .list-item-q {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .list-item-a {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .list-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .icon-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      color: var(--muted);
+    }
+
+    .icon-btn:hover.edit { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .icon-btn:hover.delete { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    .icon-btn svg { width: 15px; height: 15px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-state .emoji { font-size: 2.5rem; margin-bottom: 10px; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      z-index: 99;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 480px) {
+      .card-wrap { height: 220px; }
+      .card-face { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Study Tool</p>
+  <h1>Flashcard Quiz</h1>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('study')">Study</button>
+  <button class="tab" onclick="switchTab('manage')">Manage Cards</button>
+</div>
+
+<!-- STUDY SECTION -->
+<div class="section visible" id="study">
+  <div class="stats">
+    <div class="stat-pill">Total: <span id="totalCount">0</span></div>
+    <div class="stat-pill">Correct: <span id="correctCount">0</span></div>
+    <div class="stat-pill">Remaining: <span id="remainCount">0</span></div>
+  </div>
+
+  <div id="emptyStudy" class="empty-state" style="display:none;">
+    <div class="emoji">📚</div>
+    <p>No flashcards yet.<br>Go to <strong>Manage Cards</strong> to add some!</p>
+  </div>
+
+  <div id="studyContent">
+    <div class="card-wrap" id="cardWrap" onclick="flipCard()">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face card-front">
+          <div class="card-label">Question</div>
+          <div class="card-text" id="questionText"></div>
+        </div>
+        <div class="card-face card-back">
+          <div class="card-label">Answer</div>
+          <div class="card-text" id="answerText"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="flip-hint">Click the card to flip it</p>
+
+    <div class="nav">
+      <button class="nav-btn" id="prevBtn" onclick="prevCard()">&#8592;</button>
+      <span class="card-counter" id="cardCounter">1 / 1</span>
+      <button class="nav-btn" id="nextBtn" onclick="nextCard()">&#8594;</button>
+    </div>
+
+    <button class="show-btn" onclick="flipCard()">Show Answer</button>
+  </div>
+</div>
+
+<!-- MANAGE SECTION -->
+<div class="section" id="manage">
+  <div class="form-card">
+    <h2 id="formTitle">Add New Card</h2>
+    <input type="hidden" id="editIndex" value="-1"/>
+    <div class="form-group">
+      <label>Question</label>
+      <textarea id="inputQ" rows="2" placeholder="Enter your question..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Answer</label>
+      <textarea id="inputA" rows="2" placeholder="Enter the answer..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="saveCard()">Save Card</button>
+      <button class="btn-secondary" onclick="cancelEdit()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="card-list" id="cardList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // Default cards
+  let cards = [
+    { q: "What is the capital of France?", a: "Paris" },
+    { q: "What does HTML stand for?", a: "HyperText Markup Language" },
+    { q: "What is 12 × 12?", a: "144" },
+    { q: "Who wrote Romeo and Juliet?", a: "William Shakespeare" },
+    { q: "What is the chemical symbol for water?", a: "H₂O" },
+  ];
+
+  let currentIndex = 0;
+  let correctCount = 0;
+  let isFlipped = false;
+
+  function saveToStorage() {
+    localStorage.setItem('flashcards', JSON.stringify(cards));
+  }
+
+  function loadFromStorage() {
+    const saved = localStorage.getItem('flashcards');
+    if (saved) cards = JSON.parse(saved);
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+    event.target.classList.add('active');
+    document.getElementById(tab).classList.add('visible');
+    if (tab === 'manage') renderList();
+    if (tab === 'study') renderStudy();
+  }
+
+  function renderStudy() {
+    const total = cards.length;
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('correctCount').textContent = correctCount;
+    document.getElementById('remainCount').textContent = Math.max(0, total - currentIndex);
+
+    if (total === 0) {
+      document.getElementById('emptyStudy').style.display = 'block';
+      document.getElementById('studyContent').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('emptyStudy').style.display = 'none';
+    document.getElementById('studyContent').style.display = 'block';
+
+    if (currentIndex >= total) currentIndex = total - 1;
+    const card = cards[currentIndex];
+    document.getElementById('questionText').textContent = card.q;
+    document.getElementById('answerText').textContent = card.a;
+    document.getElementById('cardCounter').textContent = `${currentIndex + 1} / ${total}`;
+    document.getElementById('prevBtn').disabled = currentIndex === 0;
+    document.getElementById('nextBtn').disabled = currentIndex === total - 1;
+
+    // Reset flip
+    isFlipped = false;
+    document.getElementById('cardInner').classList.remove('flipped');
+  }
+
+  function flipCard() {
+    isFlipped = !isFlipped;
+    document.getElementById('cardInner').classList.toggle('flipped', isFlipped);
+  }
+
+  function prevCard() {
+    if (currentIndex > 0) { currentIndex--; renderStudy(); }
+  }
+
+  function nextCard() {
+    if (currentIndex < cards.length - 1) { currentIndex++; renderStudy(); }
+  }
+
+  function renderList() {
+    const list = document.getElementById('cardList');
+    if (cards.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="emoji">🃏</div><p>No cards yet. Add one above!</p></div>';
+      return;
+    }
+    list.innerHTML = cards.map((c, i) => `
+      <div class="list-item">
+        <div class="list-item-content">
+          <div class="list-item-q">${escHtml(c.q)}</div>
+          <div class="list-item-a">${escHtml(c.a)}</div>
+        </div>
+        <div class="list-actions">
+          <button class="icon-btn edit" onclick="editCard(${i})" title="Edit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button class="icon-btn delete" onclick="deleteCard(${i})" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function saveCard() {
+    const q = document.getElementById('inputQ').value.trim();
+    const a = document.getElementById('inputA').value.trim();
+    const idx = parseInt(document.getElementById('editIndex').value);
+
+    if (!q || !a) { showToast('Please fill in both fields!'); return; }
+
+    if (idx === -1) {
+      cards.push({ q, a });
+      showToast('Card added!');
+    } else {
+      cards[idx] = { q, a };
+      showToast('Card updated!');
+    }
+
+    saveToStorage();
+    cancelEdit();
+    renderList();
+  }
+
+  function editCard(i) {
+    document.getElementById('inputQ').value = cards[i].q;
+    document.getElementById('inputA').value = cards[i].a;
+    document.getElementById('editIndex').value = i;
+    document.getElementById('formTitle').textContent = 'Edit Card';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function deleteCard(i) {
+    cards.splice(i, 1);
+    saveToStorage();
+    renderList();
+    showToast('Card deleted!');
+  }
+
+  function cancelEdit() {
+    document.getElementById('inputQ').value = '';
+    document.getElementById('inputA').value = '';
+    document.getElementById('editIndex').value = '-1';
+    document.getElementById('formTitle').textContent = 'Add New Card';
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // Init
+  loadFromStorage();
+  renderStudy();
+</script>
+</body>
+</html>
